@@ -1,0 +1,46 @@
+name: Build Dylib Hook Dylib
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Show Xcode info
+      run: |
+        xcode-select -p
+        xcrun --sdk iphoneos --show-sdk-path
+
+    - name: Compile iOS arm64/arm64e Dylib
+      run: |
+        SDK_PATH=$(xcrun --sdk iphoneos --show-sdk-path)
+
+        xcrun -sdk iphoneos clang \
+          -dynamiclib main.m \
+          -framework Foundation \
+          -arch arm64 -arch arm64e \
+          -isysroot "$SDK_PATH" \
+          -miphoneos-version-min=15.0 \
+          -o Dylib.dylib
+
+    - name: Verify architectures
+      run: |
+        file Dylib.dylib
+        lipo -info Dylib.dylib
+        otool -hv Dylib.dylib
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Dylib-dylib
+        path: Dylib.dylib
+        retention-days: 14
